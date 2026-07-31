@@ -5,15 +5,18 @@ on:
   pull_request:
 
 jobs:
-  hello-world:
-    name: Hello World (pipeline skeleton verification)
+  secret-scan:
+    name: Gitleaks Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (full history)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Say hello
-        run: echo "SecureFlow DevSecOps pipeline skeleton is running."
-
-      - name: Confirm repository checkout worked
-        run: ls -la
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+        with:
+          args: --log-opts=--all
