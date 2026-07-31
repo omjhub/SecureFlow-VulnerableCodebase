@@ -67,8 +67,16 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SCOPE_PARAM="pullRequest=${{ github.event.pull_request.number }}"
+          else
+            SCOPE_PARAM="branch=${{ github.ref_name }}"
+          fi
+
+          echo "Querying SonarQube with: $SCOPE_PARAM"
+
           curl -s -u "$SONAR_TOKEN:" \
-            "https://sonarcloud.io/api/issues/search?componentKeys=<PROJECT_KEY>&resolved=false&ps=500" \
+            "https://sonarcloud.io/api/issues/search?componentKeys=omjhub_SecureFlow-VulnerableCodebase&resolved=false&ps=500&${SCOPE_PARAM}" \
             -o sonar-findings.json
 
           CRITICAL_COUNT=$(jq '[.issues[] | select(.severity=="CRITICAL" or .severity=="BLOCKER")] | length' sonar-findings.json)
