@@ -1,0 +1,56 @@
+Severity,Rule,File,Line,Type,Message
+MAJOR,githubactions:S7637,.github/workflows/devsecops-pipeline.yml,55,VULNERABILITY,Use full commit SHA hash for this dependency.
+MAJOR,githubactions:S6506,.github/workflows/devsecops-pipeline.yml,20,VULNERABILITY,Not enforcing HTTPS here might allow for redirections to insecure websites. Make sure it is safe here.
+MAJOR,kubernetes:S6596,infra/kubernetes/base/auth-service.yaml,20,CODE_SMELL,"Use a specific version tag for the image instead of ""latest""."
+MAJOR,kubernetes:S6428,infra/kubernetes/base/auth-service.yaml,40,VULNERABILITY,Ensure that enabling privileged mode is safe here.
+MAJOR,kubernetes:S6430,infra/kubernetes/base/auth-service.yaml,41,VULNERABILITY,Make sure that enabling privilege escalation is safe here.
+MINOR,kubernetes:S5332,infra/kubernetes/base/configmap.yaml,13,VULNERABILITY,Make sure that using clear-text protocols is safe here.
+MINOR,kubernetes:S5332,infra/kubernetes/base/configmap.yaml,14,VULNERABILITY,Make sure that using clear-text protocols is safe here.
+MAJOR,kubernetes:S6596,infra/kubernetes/base/frontend.yaml,18,CODE_SMELL,"Use a specific version tag for the image instead of ""latest""."
+MAJOR,kubernetes:S6428,infra/kubernetes/base/frontend.yaml,25,VULNERABILITY,Ensure that enabling privileged mode is safe here.
+MAJOR,kubernetes:S6430,infra/kubernetes/base/frontend.yaml,26,VULNERABILITY,Make sure that enabling privilege escalation is safe here.
+MAJOR,kubernetes:S6596,infra/kubernetes/base/transaction-service.yaml,18,CODE_SMELL,"Use a specific version tag for the image instead of ""latest""."
+MAJOR,kubernetes:S6428,infra/kubernetes/base/transaction-service.yaml,37,VULNERABILITY,Ensure that enabling privileged mode is safe here.
+MAJOR,kubernetes:S6430,infra/kubernetes/base/transaction-service.yaml,38,VULNERABILITY,Make sure that enabling privilege escalation is safe here.
+BLOCKER,terraform:S6302,infra/terraform/modules/iam/main.tf,52,VULNERABILITY,Make sure granting all privileges is safe here.
+MAJOR,terraform:S6364,infra/terraform/modules/rds/main.tf,35,VULNERABILITY,"Omitting ""backup_retention_period"" results in a short backup retention duration. Make sure it is safe here."
+BLOCKER,terraform:S8793,infra/terraform/modules/rds/main.tf,46,VULNERABILITY,Make sure allowing public network access is safe here.
+MAJOR,terraform:S6303,infra/terraform/modules/rds/main.tf,47,VULNERABILITY,Make sure that using unencrypted RDS DB Instances is safe here.
+MAJOR,terraform:S6364,infra/terraform/modules/rds/main.tf,55,VULNERABILITY,"Omitting ""backup_retention_period"" results in a short backup retention duration. Make sure it is safe here."
+BLOCKER,terraform:S8793,infra/terraform/modules/rds/main.tf,66,VULNERABILITY,Make sure allowing public network access is safe here.
+MAJOR,terraform:S6303,infra/terraform/modules/rds/main.tf,67,VULNERABILITY,Make sure that using unencrypted RDS DB Instances is safe here.
+MINOR,terraform:S6249,infra/terraform/modules/s3/main.tf,7,VULNERABILITY,No bucket policy enforces HTTPS-only access to this bucket.
+MAJOR,terraform:S6258,infra/terraform/modules/s3/main.tf,7,VULNERABILITY,Make sure that disabling logging is safe here.
+CRITICAL,terraform:S6281,infra/terraform/modules/s3/main.tf,20,VULNERABILITY,Disabling public access block settings allows public ACL/policies to be set on this S3 bucket.
+MINOR,terraform:S6249,infra/terraform/modules/s3/main.tf,29,VULNERABILITY,No bucket policy enforces HTTPS-only access to this bucket.
+MAJOR,terraform:S6258,infra/terraform/modules/s3/main.tf,29,VULNERABILITY,Make sure that disabling logging is safe here.
+CRITICAL,terraform:S6281,infra/terraform/modules/s3/main.tf,34,VULNERABILITY,Disabling public access block settings allows public ACL/policies to be set on this S3 bucket.
+MINOR,terraform:S6321,infra/terraform/modules/vpc/main.tf,60,VULNERABILITY,Restrict IP addresses authorized to access administration services.
+MINOR,docker:S6471,services/auth-service/Dockerfile,2,VULNERABILITY,"The ""python"" image runs with ""root"" as the default user. Make sure it is safe here."
+MAJOR,docker:S8541,services/auth-service/Dockerfile,7,VULNERABILITY,"Omitting ""--only-binary :all:"" can lead to the execution of setup scripts. Make sure it is safe here."
+MAJOR,docker:S8544,services/auth-service/Dockerfile,7,VULNERABILITY,Using dependencies without locking resolved versions is security-sensitive.
+CRITICAL,python:S4502,services/auth-service/app.py,12,VULNERABILITY,Make sure disabling CSRF protection is safe here.
+CRITICAL,python:S4790,services/auth-service/app.py,32,VULNERABILITY,Make sure that hashing data is safe here.
+MAJOR,python:S6965,services/auth-service/app.py,35,CODE_SMELL,Specify the HTTP methods this route should accept.
+BLOCKER,python:S8392,services/auth-service/app.py,162,VULNERABILITY,Avoid binding the application to all network interfaces.
+MINOR,python:S4507,services/auth-service/app.py,162,VULNERABILITY,Make sure this debug feature is deactivated before delivering the code in production.
+MINOR,docker:S6471,services/frontend/Dockerfile,2,VULNERABILITY,"The ""python"" image runs with ""root"" as the default user. Make sure it is safe here."
+MAJOR,docker:S8541,services/frontend/Dockerfile,7,VULNERABILITY,"Omitting ""--only-binary :all:"" can lead to the execution of setup scripts. Make sure it is safe here."
+MAJOR,docker:S8544,services/frontend/Dockerfile,7,VULNERABILITY,Using dependencies without locking resolved versions is security-sensitive.
+CRITICAL,python:S4502,services/frontend/app.py,10,VULNERABILITY,Make sure disabling CSRF protection is safe here.
+MINOR,python:S5332,services/frontend/app.py,16,VULNERABILITY,Using HTTP protocol is insecure. Use HTTPS instead.
+MINOR,python:S5332,services/frontend/app.py,17,VULNERABILITY,Using HTTP protocol is insecure. Use HTTPS instead.
+MAJOR,python:S6965,services/frontend/app.py,75,CODE_SMELL,Specify the HTTP methods this route should accept.
+MAJOR,python:S6965,services/frontend/app.py,129,CODE_SMELL,Specify the HTTP methods this route should accept.
+MAJOR,python:S6965,services/frontend/app.py,173,CODE_SMELL,Specify the HTTP methods this route should accept.
+MAJOR,python:S6965,services/frontend/app.py,179,CODE_SMELL,Specify the HTTP methods this route should accept.
+BLOCKER,python:S8392,services/frontend/app.py,185,VULNERABILITY,Avoid binding the application to all network interfaces.
+MINOR,python:S4507,services/frontend/app.py,185,VULNERABILITY,Make sure this debug feature is deactivated before delivering the code in production.
+MINOR,docker:S6471,services/transaction-service/Dockerfile,2,VULNERABILITY,"The ""python"" image runs with ""root"" as the default user. Make sure it is safe here."
+MAJOR,docker:S8541,services/transaction-service/Dockerfile,7,VULNERABILITY,"Omitting ""--only-binary :all:"" can lead to the execution of setup scripts. Make sure it is safe here."
+MAJOR,docker:S8544,services/transaction-service/Dockerfile,7,VULNERABILITY,Using dependencies without locking resolved versions is security-sensitive.
+CRITICAL,python:S4502,services/transaction-service/app.py,10,VULNERABILITY,Make sure disabling CSRF protection is safe here.
+MINOR,python:S5332,services/transaction-service/app.py,12,VULNERABILITY,Using HTTP protocol is insecure. Use HTTPS instead.
+MAJOR,python:S6965,services/transaction-service/app.py,47,CODE_SMELL,Specify the HTTP methods this route should accept.
+BLOCKER,python:S8392,services/transaction-service/app.py,201,VULNERABILITY,Avoid binding the application to all network interfaces.
+MINOR,python:S4507,services/transaction-service/app.py,201,VULNERABILITY,Make sure this debug feature is deactivated before delivering the code in production.
