@@ -98,6 +98,72 @@ jobs:
           name: sonarqube-findings
           path: sonar-findings.json
 
+  image-scan:
+    name: Trivy Image Scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build auth-service image
+        run: docker build -t auth-service:scan ./services/auth-service
+
+      - name: Build transaction-service image
+        run: docker build -t transaction-service:scan ./services/transaction-service
+
+      - name: Build frontend image
+        run: docker build -t frontend:scan ./services/frontend
+
+      - name: Scan auth-service image
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: auth-service:scan
+          format: json
+          output: trivy-auth-service.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Scan transaction-service image
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: transaction-service:scan
+          format: json
+          output: trivy-transaction-service.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: frontend:scan
+          format: json
+          output: trivy-frontend.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Evaluate hard-fail on CRITICAL/HIGH
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          TOTAL=0
+          for f in trivy-auth-service.json trivy-transaction-service.json trivy-frontend.json; do
+            COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")] | length' "$f")
+            echo "$f: $COUNT CRITICAL/HIGH findings"
+            TOTAL=$((TOTAL + COUNT))
+          done
+          echo "Total CRITICAL/HIGH across all images: $TOTAL"
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "Hard-fail: CRITICAL/HIGH CVEs present."
+            exit 1
+          fi
+
+      - name: Upload Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-reports
+          path: trivy-*.json
+
   # secret-scan:
   #   name: Gitleaks Secret Scan
   #   runs-on: ubuntu-latest
