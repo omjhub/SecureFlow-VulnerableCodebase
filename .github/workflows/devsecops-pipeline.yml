@@ -116,7 +116,7 @@ jobs:
         run: docker build -t frontend:scan ./services/frontend
 
       - name: Scan auth-service image
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: auth-service:scan
           format: json
@@ -125,7 +125,7 @@ jobs:
           exit-code: 0
 
       - name: Scan transaction-service image
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: transaction-service:scan
           format: json
@@ -134,7 +134,7 @@ jobs:
           exit-code: 0
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: frontend:scan
           format: json
