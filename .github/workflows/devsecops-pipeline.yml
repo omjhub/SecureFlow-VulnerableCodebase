@@ -220,10 +220,10 @@ jobs:
       - name: Evaluate Checkov findings
         run: |
           sudo apt-get update && sudo apt-get install -y jq
-          COUNT=$(jq '[.results.failed_checks[]? | select(.severity=="CRITICAL" or .severity=="HIGH")] | length' checkov-report.json 2>/dev/null || echo 0)
-          echo "Checkov CRITICAL/HIGH findings: $COUNT"
+          COUNT=$(jq '.results.failed_checks | length' checkov-report.json 2>/dev/null || echo 0)
+          echo "Checkov failed checks: $COUNT"
           if [ "$COUNT" -gt 0 ]; then
-            echo "Hard-fail: CRITICAL/HIGH IaC findings present."
+            echo "Hard-fail: Checkov IaC misconfigurations present."
             exit 1
           fi
 
