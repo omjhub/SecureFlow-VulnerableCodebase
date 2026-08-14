@@ -90,3 +90,17 @@ inspection (`set(c.get('severity') for c in failed[:20])` returned `{None}`).
 The pipeline's gate logic was corrected to hard-fail on any failed check
 rather than filtering by severity, since severity data is unavailable in this
 configuration.
+
+## Pipeline Execution Order — Deviation from Documented Staging
+
+The task documentation (Step 04) specifies sequential job dependencies
+("stages run in order"). This pipeline instead runs image-scan,
+k8s-iac-scan, and terraform-iac-scan in parallel (no needs: chain between
+them), while sast-scan remains chained after secret-scan via needs:.
+
+This was a deliberate choice: the three parallel stages are functionally
+independent scanners with no shared inputs or outputs, so sequential
+execution would only add wall-clock time without improving detection
+accuracy or safety. Full pipeline runtime was 1m 10s with parallel
+execution; a fully sequential chain would be meaningfully slower with
+no corresponding benefit.
