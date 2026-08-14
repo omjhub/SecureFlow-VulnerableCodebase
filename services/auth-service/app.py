@@ -27,6 +27,7 @@ def get_db():
     return psycopg2.connect(**DB_CONFIG)
 
 
+# NOTE: reviewing this function per Day 5 security gate testing (no functional change)
 # AV-05 — Insecure Password Storage. MD5 with no salt.
 def hash_password(password: str) -> str:
     return hashlib.md5(password.encode()).hexdigest()
