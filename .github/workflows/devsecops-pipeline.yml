@@ -240,6 +240,10 @@ jobs:
     needs:
       [secret-scan, sast-scan, image-scan, k8s-iac-scan, terraform-iac-scan]
     if: always()
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Download all scanner artifacts
         uses: actions/download-artifact@v4
