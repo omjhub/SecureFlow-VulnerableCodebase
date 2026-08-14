@@ -180,3 +180,5 @@ events, and signed images with SBOM attestations.
 - When you rotate and remove secrets during remediation, remember that deleting
   a file in a later commit does **not** remove the secret from git history.
   
+
+<!-- Day 5: testing /security-exception trigger -->
