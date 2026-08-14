@@ -98,6 +98,141 @@ jobs:
           name: sonarqube-findings
           path: sonar-findings.json
 
+  image-scan:
+    name: Trivy Image Scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build auth-service image
+        run: docker build -t auth-service:scan ./services/auth-service
+
+      - name: Build transaction-service image
+        run: docker build -t transaction-service:scan ./services/transaction-service
+
+      - name: Build frontend image
+        run: docker build -t frontend:scan ./services/frontend
+
+      - name: Scan auth-service image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: auth-service:scan
+          format: json
+          output: trivy-auth-service.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Scan transaction-service image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: transaction-service:scan
+          format: json
+          output: trivy-transaction-service.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: frontend:scan
+          format: json
+          output: trivy-frontend.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Evaluate hard-fail on CRITICAL/HIGH
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          TOTAL=0
+          for f in trivy-auth-service.json trivy-transaction-service.json trivy-frontend.json; do
+            COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")] | length' "$f")
+            echo "$f: $COUNT CRITICAL/HIGH findings"
+            TOTAL=$((TOTAL + COUNT))
+          done
+          echo "Total CRITICAL/HIGH across all images: $TOTAL"
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "Hard-fail: CRITICAL/HIGH CVEs present."
+            exit 1
+          fi
+
+      - name: Upload Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-reports
+          path: trivy-*.json
+
+  k8s-iac-scan:
+    name: Trivy K8s Config Scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Trivy config scan — Kubernetes
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: infra/kubernetes/
+          format: json
+          output: trivy-k8s-report.json
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Evaluate K8s findings
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          COUNT=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")] | length' trivy-k8s-report.json)
+          echo "K8s CRITICAL/HIGH misconfigurations: $COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Hard-fail: CRITICAL/HIGH K8s misconfigurations present."
+            exit 1
+          fi
+
+      - name: Upload K8s scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-k8s-report
+          path: trivy-k8s-report.json
+
+  terraform-iac-scan:
+    name: Checkov Terraform Scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra/terraform/
+          framework: terraform
+          output_format: cli,json
+          output_file_path: console,checkov-report.json
+          soft_fail: true
+
+      - name: Evaluate Checkov findings
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          COUNT=$(jq '.results.failed_checks | length' checkov-report.json 2>/dev/null || echo 0)
+          echo "Checkov failed checks: $COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Hard-fail: Checkov IaC misconfigurations present."
+            exit 1
+          fi
+
+      - name: Upload Checkov report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: checkov-report.json
   # secret-scan:
   #   name: Gitleaks Secret Scan
   #   runs-on: ubuntu-latest
