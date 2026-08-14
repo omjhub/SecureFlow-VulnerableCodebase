@@ -198,6 +198,41 @@ jobs:
         with:
           name: trivy-k8s-report
           path: trivy-k8s-report.json
+
+  terraform-iac-scan:
+    name: Checkov Terraform Scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra/terraform/
+          framework: terraform
+          output_format: cli,json
+          output_file_path: console,checkov-report.json
+          soft_fail: true
+
+      - name: Evaluate Checkov findings
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          COUNT=$(jq '[.results.failed_checks[]? | select(.severity=="CRITICAL" or .severity=="HIGH")] | length' checkov-report.json 2>/dev/null || echo 0)
+          echo "Checkov CRITICAL/HIGH findings: $COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Hard-fail: CRITICAL/HIGH IaC findings present."
+            exit 1
+          fi
+
+      - name: Upload Checkov report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: checkov-report.json
   # secret-scan:
   #   name: Gitleaks Secret Scan
   #   runs-on: ubuntu-latest
