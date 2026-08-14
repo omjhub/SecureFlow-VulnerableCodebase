@@ -1,0 +1,48 @@
+name: Security Exception Handler
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  handle-exception:
+    name: Log Security Exception Request
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request != null && startsWith(github.event.comment.body, '/security-exception')
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Extract justification and post acknowledgment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentBody = context.payload.comment.body;
+            const author = context.payload.comment.user.login;
+            const justification = commentBody.replace('/security-exception', '').trim();
+
+            if (!justification) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `⚠️ **Security exception request rejected.**\n\n@${author}, a written justification is required. Please comment again in the form:\n\`/security-exception <your justification here>\``
+              });
+              return;
+            }
+
+            const timestamp = new Date().toISOString();
+            const logEntry = `## 🔓 Security Exception Requested\n\n` +
+              `**Requested by:** @${author}\n` +
+              `**Timestamp:** ${timestamp}\n` +
+              `**Justification:** ${justification}\n\n` +
+              `**Status:** Logged for review. Per \`docs/security-gate-policy.md\` Section 4, this exception applies only ` +
+              `to the current commit and must reference a remediation deadline. A repository admin may now manually ` +
+              `override the required status check if approved. Gitleaks findings are never eligible for exception.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: logEntry
+            });
