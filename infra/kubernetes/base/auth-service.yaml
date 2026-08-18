@@ -1,5 +1,3 @@
-#
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,8 +28,6 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/auth-secrets && exec python app.py
-          # args:
-          #   - source /vault/secrets/auth-secrets && exec python app.py
           ports:
             - containerPort: 5001
           envFrom:
@@ -45,9 +41,13 @@ spec:
             - name: DB_USER
               value: authuser
           securityContext:
-            privileged: true
-            allowPrivilegeEscalation: true
-            runAsUser: 0
+            privileged: false
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 100
+            capabilities:
+              drop:
+                - ALL
 ---
 apiVersion: v1
 kind: Service
