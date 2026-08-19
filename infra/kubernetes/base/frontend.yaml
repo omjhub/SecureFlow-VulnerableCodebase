@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: secureflow
+  labels:
+    app: frontend
+    team: devsecops
 spec:
   replicas: 1
   selector:
@@ -12,6 +15,8 @@ spec:
     metadata:
       labels:
         svc: frontend
+        app: frontend
+        team: devsecops
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "frontend-role"
@@ -24,6 +29,7 @@ spec:
       containers:
         - name: frontend
           image: secureflow/frontend:latest
+          imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/frontend-secrets && exec python app.py
@@ -32,6 +38,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: secureflow-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
@@ -46,6 +59,9 @@ kind: Service
 metadata:
   name: frontend
   namespace: secureflow
+  labels:
+    app: frontend
+    team: devsecops
 spec:
   type: NodePort
   selector:

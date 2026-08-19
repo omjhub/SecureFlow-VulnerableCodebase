@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: transaction-service
   namespace: secureflow
+  labels:
+    app: transaction-service
+    team: devsecops
 spec:
   replicas: 1
   selector:
@@ -12,6 +15,8 @@ spec:
     metadata:
       labels:
         svc: transaction-service
+        app: transaction-service
+        team: devsecops
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "transaction-service-role"
@@ -24,6 +29,7 @@ spec:
       containers:
         - name: transaction-service
           image: secureflow/transaction-service:latest
+          imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/tx-secrets && exec python app.py
@@ -39,6 +45,13 @@ spec:
               value: transactiondb
             - name: DB_USER
               value: txuser
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
@@ -53,6 +66,9 @@ kind: Service
 metadata:
   name: transaction-service
   namespace: secureflow
+  labels:
+    app: transaction-service
+    team: devsecops
 spec:
   selector:
     svc: transaction-service

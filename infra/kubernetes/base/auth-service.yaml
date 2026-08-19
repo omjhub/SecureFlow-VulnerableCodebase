@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: auth-service
   namespace: secureflow
+  labels:
+    app: auth-service
+    team: devsecops
 spec:
   replicas: 1
   selector:
@@ -12,6 +15,8 @@ spec:
     metadata:
       labels:
         svc: auth-service
+        app: auth-service
+        team: devsecops
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "auth-service-role"
@@ -25,6 +30,7 @@ spec:
       containers:
         - name: auth-service
           image: secureflow/auth-service:latest
+          imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/auth-secrets && exec python app.py
@@ -40,6 +46,13 @@ spec:
               value: authdb
             - name: DB_USER
               value: authuser
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
@@ -54,6 +67,9 @@ kind: Service
 metadata:
   name: auth-service
   namespace: secureflow
+  labels:
+    app: auth-service
+    team: devsecops
 spec:
   selector:
     svc: auth-service
