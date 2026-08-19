@@ -1,0 +1,213 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-egress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: frontend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              svc: auth-service
+      ports:
+        - protocol: TCP
+          port: 5001
+    - to:
+        - podSelector:
+            matchLabels:
+              svc: transaction-service
+      ports:
+        - protocol: TCP
+          port: 5002
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-service-ingress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: auth-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              svc: frontend
+      ports:
+        - protocol: TCP
+          port: 5001
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-service-egress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: auth-service
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              svc: auth-db
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: transaction-service-ingress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: transaction-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              svc: frontend
+      ports:
+        - protocol: TCP
+          port: 5002
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: transaction-service-egress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: transaction-service
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              svc: transaction-db
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              svc: auth-service
+      ports:
+        - protocol: TCP
+          port: 5001
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-db-ingress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: auth-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              svc: auth-service
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: transaction-db-ingress
+  namespace: secureflow
+  labels:
+    app: network-policy
+    team: devsecops
+spec:
+  podSelector:
+    matchLabels:
+      svc: transaction-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              svc: transaction-service
+      ports:
+        - protocol: TCP
+          port: 5432
