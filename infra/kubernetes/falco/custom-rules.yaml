@@ -1,0 +1,47 @@
+- rule: SecureFlow Shell Spawned in Container
+  desc: Detects an interactive shell spawned inside a SecureFlow container (e.g. via kubectl exec)
+  condition: >
+    spawned_process and container and
+    k8s.ns.name = "secureflow" and
+    proc.name in (bash, sh, ash)
+  output: >
+    Shell spawned in SecureFlow container (user=%user.name container=%container.name
+    image=%container.image.repository pod=%k8s.pod.name command=%proc.cmdline)
+  priority: WARNING
+  tags: [secureflow, shell]
+
+- rule: SecureFlow Sensitive File Read
+  desc: Detects reading of /etc/shadow or other sensitive files inside a SecureFlow container
+  condition: >
+    open_read and container and
+    k8s.ns.name = "secureflow" and
+    fd.name in (/etc/shadow, /etc/passwd)
+  output: >
+    Sensitive file read in SecureFlow container (user=%user.name container=%container.name
+    file=%fd.name pod=%k8s.pod.name command=%proc.cmdline)
+  priority: WARNING
+  tags: [secureflow, filesystem]
+
+- rule: SecureFlow Unexpected Outbound Connection
+  desc: Detects an outbound network connection from a SecureFlow container to a destination outside the expected internal service ports
+  condition: >
+    outbound and container and
+    k8s.ns.name = "secureflow" and
+    not fd.sport in (5000, 5001, 5002, 5432)
+  output: >
+    Unexpected outbound connection from SecureFlow container (container=%container.name
+    pod=%k8s.pod.name connection=%fd.name)
+  priority: WARNING
+  tags: [secureflow, network]
+
+- rule: SecureFlow Package Manager Execution
+  desc: Detects package manager execution (apt-get, apt, pip install, etc.) inside a running SecureFlow container
+  condition: >
+    spawned_process and container and
+    k8s.ns.name = "secureflow" and
+    proc.name in (apt, apt-get, dpkg, pip, pip3)
+  output: >
+    Package manager executed in SecureFlow container (user=%user.name container=%container.name
+    pod=%k8s.pod.name command=%proc.cmdline)
+  priority: WARNING
+  tags: [secureflow, package-manager]
