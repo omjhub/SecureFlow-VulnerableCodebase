@@ -69,6 +69,11 @@ resource "aws_db_parameter_group" "postgres" {
     name  = "log_min_duration_statement"
     value = "1000"
   }
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "1"
+  }
 }
 
 # CKV_AWS_118 remediated — enhanced monitoring requires its own IAM role,
