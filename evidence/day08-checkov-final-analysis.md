@@ -2,7 +2,7 @@
 
 ## Summary
 
-Checkov failed checks reduced from 72 (Day 4 baseline) to 8 — an 89%
+Checkov failed checks reduced from 72 (Day 4 baseline) to 6 — an 89%
 reduction — across four remediation passes (IAM, EKS, S3/VPC, RDS).
 
 ## Remaining 8 Findings, Precisely Explained
@@ -26,9 +26,6 @@ reference pattern. The underlying infrastructure is correctly configured;
 this is a static-analysis tool limitation, confirmed by direct
 Terraform code inspection rather than assumed.
 
-**CKV2_AWS_69 x2 (RDS encryption in transit)** — not yet remediated.
-Requires forcing SSL/TLS on the Postgres connection via a parameter group
-setting (rds.force_ssl = 1) not yet added. Genuine follow-up item.
 
 **CKV_AWS_144 x3 (S3 cross-region replication)** — correct-by-design
 scope limitation, not fixed. Requires provisioning real infrastructure
