@@ -52,12 +52,13 @@ module "s3" {
 }
 
 module "eks" {
-  source             = "./modules/eks"
-  project            = var.project
-  environment        = var.environment
-  vpc_id             = module.vpc.vpc_id
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  private_subnet_ids = module.vpc.private_subnet_ids
+  source                  = "./modules/eks"
+  project                  = var.project
+  environment              = var.environment
+  vpc_id                   = module.vpc.vpc_id
+  public_subnet_ids        = module.vpc.public_subnet_ids
+  private_subnet_ids       = module.vpc.private_subnet_ids
+  app_security_group_id    = module.vpc.app_security_group_id
 }
 
 # Registers AWS IAM's trust in the EKS cluster's own OIDC identity

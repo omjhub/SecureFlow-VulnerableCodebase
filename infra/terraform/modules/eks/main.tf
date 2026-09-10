@@ -3,6 +3,7 @@ variable "environment" { type = string }
 variable "vpc_id" { type = string }
 variable "public_subnet_ids" { type = list(string) }
 variable "private_subnet_ids" { type = list(string) }
+variable "app_security_group_id" { type = string }
 
 # IV-10 remediated — nodes now use private_subnet_ids, endpoint access
 # restricted, no longer world-reachable.
@@ -62,6 +63,7 @@ resource "aws_eks_cluster" "main" {
     subnet_ids              = var.private_subnet_ids # IV-10 remediated.
     endpoint_private_access  = true                    # IV-10 remediated.
     endpoint_public_access   = false                    # CKV_AWS_38/39 remediated.
+    security_group_ids       = [var.app_security_group_id] # CKV2_AWS_5 remediated.
   }
 
   # CKV_AWS_58 remediated — secrets encrypted at rest via dedicated KMS key.

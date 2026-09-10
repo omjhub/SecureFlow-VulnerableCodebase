@@ -28,6 +28,7 @@ resource "aws_kms_key" "s3" {
   }
 }
 
+#checkov:skip=CKV_AWS_144:Cross-region replication requires provisioning real infrastructure in a second AWS region — out of scope for this local-cluster project
 resource "aws_s3_bucket" "access_logs" {
   bucket = "${var.project}-access-logs"
 
@@ -97,6 +98,7 @@ resource "aws_s3_bucket_notification" "access_logs" {
   }
 }
 
+#checkov:skip=CKV_AWS_144:Cross-region replication requires provisioning real infrastructure in a second AWS region — out of scope for this local-cluster project
 resource "aws_s3_bucket" "artifacts" {
   bucket = "${var.project}-artifacts"
 
@@ -173,6 +175,7 @@ resource "aws_s3_bucket_notification" "artifacts" {
   }
 }
 
+#checkov:skip=CKV_AWS_144:Cross-region replication requires provisioning real infrastructure in a second AWS region — out of scope for this local-cluster project
 resource "aws_s3_bucket" "audit_logs" {
   bucket = "${var.project}-audit-logs"
 

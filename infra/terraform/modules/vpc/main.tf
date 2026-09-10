@@ -21,9 +21,7 @@ resource "aws_internet_gateway" "main" {
 
 # Public subnets — retained only for the NAT gateway and any public-facing
 # load balancer. EKS nodes no longer live here (see private subnets below).
-# CKV_AWS_130 — accepted risk, both public subnets: these subnets
-# specifically host the NAT gateway, which requires a public IP to
-# function. This is correct by design, not a misconfiguration.
+#checkov:skip=CKV_AWS_130:Public subnets exist specifically to host the NAT gateway, which requires a public IP to function — correct by design, not a misconfiguration
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
@@ -130,11 +128,9 @@ resource "aws_security_group" "app" {
     cidr_blocks = [aws_vpc.main.cidr_block]
   }
 
-  # CKV_AWS_382 — accepted risk: broad egress required for image pulls
-  # and external API calls from application pods. Narrowing this to
-  # specific destinations is a follow-up, not today's scope.
+  #checkov:skip=CKV_AWS_382:Broad egress required for image pulls and external API calls from application pods; narrowing to specific destinations is a documented follow-up
   egress {
-    description = "All outbound — accepted risk, see comment above"
+    description = "All outbound — documented follow-up to narrow"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -240,6 +236,10 @@ resource "aws_flow_log" "main" {
   log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
   traffic_type    = "ALL"
   vpc_id          = aws_vpc.main.id
+}
+
+output "app_security_group_id" {
+  value = aws_security_group.app.id
 }
 
 output "vpc_id" {
