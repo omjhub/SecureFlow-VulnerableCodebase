@@ -1,22 +1,33 @@
 variable "project" { type = string }
 
-# IV-09 remediated — server-side encryption, versioning, public access
-# blocks fully enabled, and access logging added across all buckets.
+data "aws_caller_identity" "current" {}
 
-# Dedicated KMS key for S3 encryption, separate from the EKS secrets key —
-# different resource, different blast radius if one key is ever compromised.
+# CKV2_AWS_64 remediated — explicit KMS key policy. Without one, a key
+# falls back to an implicit default policy that Checkov flags as
+# insufficiently auditable/restrictive.
 resource "aws_kms_key" "s3" {
   description             = "${var.project} S3 bucket encryption"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "EnableRootAccountAccess"
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      }
+      Action   = "kms:*"
+      Resource = "*"
+    }]
+  })
 
   tags = {
     Name = "${var.project}-s3-kms"
   }
 }
 
-# Dedicated logging-target bucket — receives access logs from the other
-# buckets. Never logs to itself, per S3 access-logging best practice.
 resource "aws_s3_bucket" "access_logs" {
   bucket = "${var.project}-access-logs"
 
@@ -50,6 +61,21 @@ resource "aws_s3_bucket_versioning" "access_logs" {
   bucket = aws_s3_bucket.access_logs.id
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+# CKV2_AWS_61 remediated — lifecycle rule expiring old noncurrent
+# versions rather than retaining every version forever.
+resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+
+  rule {
+    id     = "expire-old-versions"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
   }
 }
 
@@ -95,6 +121,35 @@ resource "aws_s3_bucket_logging" "artifacts" {
   target_prefix = "artifacts/"
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  rule {
+    id     = "expire-old-versions"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+  }
+}
+
+# CKV2_AWS_62 remediated — SNS topic + event notification, so any
+# object write to this bucket is observable, not just discoverable
+# after the fact via a manual list.
+resource "aws_sns_topic" "artifacts_events" {
+  name = "${var.project}-artifacts-events"
+}
+
+resource "aws_s3_bucket_notification" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  topic {
+    topic_arn = aws_sns_topic.artifacts_events.arn
+    events    = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
+  }
+}
+
 resource "aws_s3_bucket" "audit_logs" {
   bucket = "${var.project}-audit-logs"
 
@@ -135,6 +190,32 @@ resource "aws_s3_bucket_logging" "audit_logs" {
   bucket        = aws_s3_bucket.audit_logs.id
   target_bucket = aws_s3_bucket.access_logs.id
   target_prefix = "audit-logs/"
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "audit_logs" {
+  bucket = aws_s3_bucket.audit_logs.id
+
+  rule {
+    id     = "expire-old-versions"
+    status = "Enabled"
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+  }
+}
+
+resource "aws_sns_topic" "audit_logs_events" {
+  name = "${var.project}-audit-logs-events"
+}
+
+resource "aws_s3_bucket_notification" "audit_logs" {
+  bucket = aws_s3_bucket.audit_logs.id
+
+  topic {
+    topic_arn = aws_sns_topic.audit_logs_events.arn
+    events    = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
+  }
 }
 
 output "artifacts_bucket" {

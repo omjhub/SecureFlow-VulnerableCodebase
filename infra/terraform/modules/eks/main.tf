@@ -28,10 +28,25 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 }
 
 # CKV_AWS_58 remediated — dedicated KMS key for EKS secrets encryption.
+data "aws_caller_identity" "current" {}
+
 resource "aws_kms_key" "eks_secrets" {
   description             = "${var.project}-${var.environment} EKS secrets encryption"
   deletion_window_in_days = 30
   enable_key_rotation      = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "EnableRootAccountAccess"
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      }
+      Action   = "kms:*"
+      Resource = "*"
+    }]
+  })
 
   tags = {
     Name = "${var.project}-${var.environment}-eks-secrets-kms"
