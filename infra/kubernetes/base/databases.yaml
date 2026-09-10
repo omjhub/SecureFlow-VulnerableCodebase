@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: auth-db
   namespace: secureflow
+  labels:
+    app: auth-db
+    team: devsecops
 spec:
   replicas: 1
   selector:
@@ -12,10 +15,12 @@ spec:
     metadata:
       labels:
         svc: auth-db
+        app: auth-db
+        team: devsecops
     spec:
       containers:
         - name: postgres
-          image: postgres:14    # CK-03 — no digest pinning.
+          image: postgres:14
           env:
             - name: POSTGRES_DB
               value: authdb
@@ -28,12 +33,22 @@ spec:
                   key: AUTH_DB_PASSWORD
           ports:
             - containerPort: 5432
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: auth-db
   namespace: secureflow
+  labels:
+    app: auth-db
+    team: devsecops
 spec:
   selector:
     svc: auth-db
@@ -46,6 +61,9 @@ kind: Deployment
 metadata:
   name: transaction-db
   namespace: secureflow
+  labels:
+    app: transaction-db
+    team: devsecops
 spec:
   replicas: 1
   selector:
@@ -55,6 +73,8 @@ spec:
     metadata:
       labels:
         svc: transaction-db
+        app: transaction-db
+        team: devsecops
     spec:
       containers:
         - name: postgres
@@ -71,12 +91,22 @@ spec:
                   key: TX_DB_PASSWORD
           ports:
             - containerPort: 5432
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: transaction-db
   namespace: secureflow
+  labels:
+    app: transaction-db
+    team: devsecops
 spec:
   selector:
     svc: transaction-db
