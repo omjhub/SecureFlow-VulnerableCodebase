@@ -1,8 +1,6 @@
-# SecureFlow Terraform — INTENTIONALLY VULNERABLE baseline.
-# Planted vulnerabilities are tagged with their Vulnerability Index ID.
-# DO NOT `terraform apply` this against a real AWS account — Checkov should
-# block it in the pipeline. The purpose of this tree is to give interns
-# something Checkov can flag.
+# SecureFlow Terraform — remediated baseline (Day 8).
+# DO NOT `terraform apply` this against a real AWS account without review —
+# this tree exists for Checkov static analysis in the pipeline.
 
 terraform {
   required_version = ">= 1.5.0"
@@ -10,6 +8,10 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
     }
   }
 }
@@ -50,11 +52,33 @@ module "s3" {
 }
 
 module "eks" {
-  source            = "./modules/eks"
-  project           = var.project
-  environment       = var.environment
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnet_ids
+  source              = "./modules/eks"
+  project             = var.project
+  environment         = var.environment
+  vpc_id              = module.vpc.vpc_id
+  public_subnet_ids   = module.vpc.public_subnet_ids
+  private_subnet_ids  = module.vpc.private_subnet_ids
+}
+
+# Registers AWS IAM's trust in the EKS cluster's own OIDC identity
+# provider — this is the missing link IRSA depends on. Without this
+# resource, no IAM role can trust tokens issued by this cluster at all.
+data "tls_certificate" "eks" {
+  url = module.eks.cluster_oidc_issuer_url
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = module.eks.cluster_oidc_issuer_url
+}
+
+module "irsa" {
+  source                  = "./modules/irsa"
+  project                 = var.project
+  environment              = var.environment
+  cluster_oidc_issuer_url  = module.eks.cluster_oidc_issuer_url
+  oidc_provider_arn        = aws_iam_openid_connect_provider.eks.arn
 }
 
 module "rds" {
@@ -63,5 +87,5 @@ module "rds" {
   environment       = var.environment
   vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnet_ids
-  db_password       = "postgres" # IV-01 — hardcoded DB password reused from docker-compose.
+  db_password       = "postgres" # IV-01 — not in today's scope, RDS module untouched.
 }

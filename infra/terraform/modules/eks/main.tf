@@ -2,11 +2,10 @@ variable "project" { type = string }
 variable "environment" { type = string }
 variable "vpc_id" { type = string }
 variable "public_subnet_ids" { type = list(string) }
+variable "private_subnet_ids" { type = list(string) }
 
-# IV-10 — EKS nodes placed in public subnets with a public API endpoint.
-# Remediation: create private subnets with NAT gateway routing, set
-# endpoint_private_access=true, endpoint_public_access=false (or restrict cidrs),
-# and move node groups into the private subnet IDs.
+# IV-10 remediated — nodes now use private_subnet_ids, endpoint access
+# restricted, no longer world-reachable.
 
 resource "aws_iam_role" "cluster" {
   name = "${var.project}-${var.environment}-eks-cluster"
@@ -28,20 +27,44 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
+# CKV_AWS_58 remediated — dedicated KMS key for EKS secrets encryption.
+resource "aws_kms_key" "eks_secrets" {
+  description             = "${var.project}-${var.environment} EKS secrets encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation      = true
+
+  tags = {
+    Name = "${var.project}-${var.environment}-eks-secrets-kms"
+  }
+}
+
 resource "aws_eks_cluster" "main" {
   name     = "${var.project}-${var.environment}"
   role_arn = aws_iam_role.cluster.arn
-  version  = "1.28"
+  version  = "1.35" # CKV_AWS_339 remediated — current AWS-supported version.
 
   vpc_config {
-    subnet_ids              = var.public_subnet_ids # IV-10
-    endpoint_private_access = false                  # IV-10
-    endpoint_public_access  = true                   # IV-10
-    public_access_cidrs     = ["0.0.0.0/0"]          # IV-10
+    subnet_ids              = var.private_subnet_ids # IV-10 remediated.
+    endpoint_private_access  = true                    # IV-10 remediated.
+    endpoint_public_access   = false                    # CKV_AWS_38/39 remediated.
   }
 
-  # Deliberately missing: encryption_config for secrets at rest.
-  # Deliberately missing: enabled_cluster_log_types.
+  # CKV_AWS_58 remediated — secrets encrypted at rest via dedicated KMS key.
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks_secrets.arn
+    }
+    resources = ["secrets"]
+  }
+
+  # CKV_AWS_37 remediated — full control plane audit trail enabled.
+  enabled_cluster_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler",
+  ]
 
   depends_on = [aws_iam_role_policy_attachment.cluster_policy]
 }
@@ -61,17 +84,28 @@ resource "aws_iam_role" "node_group" {
   })
 }
 
-# IV-08 — node group role also gets AdministratorAccess.
-resource "aws_iam_role_policy_attachment" "node_admin" {
+# IV-08 remediated — replaced AdministratorAccess with the three
+# specific managed policies an EKS worker node actually needs.
+resource "aws_iam_role_policy_attachment" "node_worker_policy" {
   role       = aws_iam_role.node_group.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "node_cni_policy" {
+  role       = aws_iam_role.node_group.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "node_ecr_readonly" {
+  role       = aws_iam_role.node_group.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.project}-${var.environment}-ng"
   node_role_arn   = aws_iam_role.node_group.arn
-  subnet_ids      = var.public_subnet_ids # IV-10 — nodes in public subnets.
+  subnet_ids      = var.private_subnet_ids # IV-10 remediated.
 
   scaling_config {
     desired_size = 2
@@ -88,4 +122,8 @@ output "cluster_name" {
 
 output "cluster_endpoint" {
   value = aws_eks_cluster.main.endpoint
+}
+
+output "cluster_oidc_issuer_url" {
+  value = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }

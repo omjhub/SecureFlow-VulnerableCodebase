@@ -1,9 +1,8 @@
 variable "project" { type = string }
 
-# IV-08 — EKS node role is given AdministratorAccess.
-# Remediation: scope to specific managed policies (AmazonEKSWorkerNodePolicy,
-# AmazonEKS_CNI_Policy, AmazonEC2ContainerRegistryReadOnly) and use IRSA for
-# application pods that need AWS access.
+# IV-08 remediated — EKS node role scoped to specific managed policies
+# instead of AdministratorAccess. IRSA (see irsa module) handles
+# per-pod AWS access needs instead of a broad shared node role.
 
 resource "aws_iam_role" "eks_node" {
   name = "${var.project}-eks-node-role"
@@ -20,12 +19,24 @@ resource "aws_iam_role" "eks_node" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "admin_access" {
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
   role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess" # IV-08
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
-# A second role used by the app pods — also over-privileged.
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_read_only" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# App role — deliberately denies all access by default. Real permissions
+# should be added only when a specific pod demonstrates a specific,
+# genuine AWS API need, via IRSA scoping, not granted preemptively.
 resource "aws_iam_role" "app_role" {
   name = "${var.project}-app-role"
 
@@ -48,9 +59,9 @@ resource "aws_iam_role_policy" "app_inline" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = "*"     # IV-08 — wildcard action.
-      Resource = "*"     # IV-08 — wildcard resource.
+      Effect   = "Deny"
+      Action   = "*"
+      Resource = "*"
     }]
   })
 }
