@@ -52,12 +52,12 @@ module "s3" {
 }
 
 module "eks" {
-  source              = "./modules/eks"
-  project             = var.project
-  environment         = var.environment
-  vpc_id              = module.vpc.vpc_id
-  public_subnet_ids   = module.vpc.public_subnet_ids
-  private_subnet_ids  = module.vpc.private_subnet_ids
+  source             = "./modules/eks"
+  project            = var.project
+  environment        = var.environment
+  vpc_id             = module.vpc.vpc_id
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  private_subnet_ids = module.vpc.private_subnet_ids
 }
 
 # Registers AWS IAM's trust in the EKS cluster's own OIDC identity
@@ -82,10 +82,10 @@ module "irsa" {
 }
 
 module "rds" {
-  source            = "./modules/rds"
-  project           = var.project
-  environment       = var.environment
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnet_ids
-  db_password       = "postgres" # IV-01 — not in today's scope, RDS module untouched.
+  source             = "./modules/rds"
+  project            = var.project
+  environment        = var.environment
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  db_password        = "postgres" # IV-01 remains out of scope — RDS Vault migration is a follow-up.
 }
