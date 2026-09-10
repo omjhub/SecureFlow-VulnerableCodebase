@@ -76,6 +76,24 @@ resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
     noncurrent_version_expiration {
       noncurrent_days = 90
     }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
+resource "aws_sns_topic" "access_logs_events" {
+  name              = "${var.project}-access-logs-events"
+  kms_master_key_id = aws_kms_key.s3.id
+}
+
+resource "aws_s3_bucket_notification" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+
+  topic {
+    topic_arn = aws_sns_topic.access_logs_events.arn
+    events    = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
   }
 }
 
@@ -131,6 +149,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
     noncurrent_version_expiration {
       noncurrent_days = 90
     }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 
@@ -138,7 +160,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
 # object write to this bucket is observable, not just discoverable
 # after the fact via a manual list.
 resource "aws_sns_topic" "artifacts_events" {
-  name = "${var.project}-artifacts-events"
+  name              = "${var.project}-artifacts-events"
+  kms_master_key_id = aws_kms_key.s3.id
 }
 
 resource "aws_s3_bucket_notification" "artifacts" {
@@ -202,11 +225,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "audit_logs" {
     noncurrent_version_expiration {
       noncurrent_days = 90
     }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 
 resource "aws_sns_topic" "audit_logs_events" {
-  name = "${var.project}-audit-logs-events"
+  name              = "${var.project}-audit-logs-events"
+  kms_master_key_id = aws_kms_key.s3.id
 }
 
 resource "aws_s3_bucket_notification" "audit_logs" {

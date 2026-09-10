@@ -156,9 +156,51 @@ resource "aws_default_security_group" "default" {
 
 # CKV2_AWS_11 remediated — VPC flow logs, capturing all accepted and
 # rejected traffic for the audit trail.
+data "aws_caller_identity" "current" {}
+
+# CKV_AWS_158 remediated — CloudWatch Logs requires an explicit key
+# policy statement granting the logs service permission to use the
+# key, in addition to the standard root-account statement.
+resource "aws_kms_key" "cloudwatch_logs" {
+  description             = "${var.project}-${var.environment} CloudWatch Logs encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EnableRootAccountAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowCloudWatchLogsUse"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:Describe*",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc/${var.project}-${var.environment}-flow-logs"
-  retention_in_days = 90
+  retention_in_days = 365
+  kms_key_id        = aws_kms_key.cloudwatch_logs.arn
 }
 
 resource "aws_iam_role" "vpc_flow_logs" {
