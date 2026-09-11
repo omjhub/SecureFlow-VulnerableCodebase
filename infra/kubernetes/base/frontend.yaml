@@ -20,8 +20,8 @@ spec:
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "frontend-role"
-        vault.hashicorp.com/agent-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]'
-        vault.hashicorp.com/agent-init-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]'
+        vault.hashicorp.com/agent-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"runAsNonRoot":true,"runAsUser":100,"capabilities":{"drop":["ALL"]}}}]'
+        vault.hashicorp.com/agent-init-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"runAsNonRoot":true,"runAsUser":100,"capabilities":{"drop":["ALL"]}}}]'
         vault.hashicorp.com/agent-inject-template-frontend-secrets: |
           {{- with secret "secureflow/data/frontend" -}}
           export SESSION_SECRET="{{ .Data.data.SESSION_SECRET }}"
