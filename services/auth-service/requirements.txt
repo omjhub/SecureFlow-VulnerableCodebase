@@ -1,4 +1,4 @@
-Flask==2.2.5
+Flask==3.0.3
 psycopg2-binary==2.9.9
-PyJWT==2.10.1
-Werkzeug==2.2.3
+PyJWT==2.13.0
+Werkzeug==3.0.3
