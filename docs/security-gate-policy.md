@@ -68,3 +68,39 @@ via the `/security-exception` PR comment trigger, subject to:
 
 When the Security Gate posts AppSec-owned findings to a PR comment, each
 finding includes:
+
+## 7. Documented Gate Exceptions (Day 10)
+
+Two narrow, evidence-based exceptions were added to the DevSecOps-owned
+blocking logic, both stated explicitly here rather than silently encoded,
+consistent with this policy's core principle of transparency.
+
+**7.1 Gitleaks — REDACTED placeholder exclusion.** During the Day 7
+git-filter-repo history rewrite, real secret values in historical commits
+were replaced with the literal string "REDACTED". Custom detection rules
+(matching on KEY: value shape, not value content) continued flagging
+these placeholders as findings, since RE2 (Gitleaks' regex engine) does
+not support lookahead assertions needed to exclude a specific value inline.
+The gate now excludes any finding where the matched secret is exactly
+"REDACTED", verified independently and repeatedly (Day 7, three separate
+checks) to contain zero real secret values. Genuine secrets in
+pre-remediation historical commits are NOT excluded and remain fully
+blocking — full-history detection of the original vulnerable baseline is
+intentional, not a gap, and this exception does not weaken that.
+
+**7.2 Trivy image scan — no-fix-available exclusion.** Confirmed via
+direct CVE inspection (Day 7): four CRITICAL findings per service, all in
+the perl-base package, have no FixedVersion published by Debian for any
+consumer of the package, not specific to this project. A blocking gate
+with no possible path to satisfaction provides no remediation signal and
+incentivizes disabling the gate entirely rather than engaging with it. The
+gate now requires a CVE to have a real, non-empty FixedVersion to count
+toward the blocking total. Any CVE with an available fix — including any
+newly-disclosed CVE against a package with an existing patch — remains
+fully blocking.
+
+Both exceptions apply narrowly, to specific, evidenced, unfixable
+categories — neither is a general severity or volume threshold, and
+neither reduces detection coverage: excluded findings remain visible in
+the full JSON artifacts and in this policy document, just correctly
+excluded from a blocking decision they cannot meaningfully inform.
