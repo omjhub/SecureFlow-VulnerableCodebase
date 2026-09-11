@@ -37,3 +37,31 @@ the running cluster state, nothing of substance was actually lost, since
 every piece of configuration existed as either committed YAML or a
 documented, repeatable command sequence. Full recovery took under an
 hour, entirely from git history and prior session documentation.
+
+## Update: Prometheus/Grafana Install — Second Real Incident
+
+During Prometheus + Grafana installation, Docker Desktop filled to
+capacity, requiring a full system restart. This interrupted the original
+helm install mid-operation, leaving the release permanently stuck in
+pending-install status (confirmed via helm list) — every subsequent
+upgrade/rollback attempt correctly failed rather than proceed against a
+broken state.
+
+Separately, and more significantly: Grafana's default image tag
+(13.2.1-distroless) crashed repeatedly with exit code 135 (SIGBUS),
+not OOMKilled (137) as initially hypothesized — ruling out resource
+exhaustion as the actual cause, confirmed via kubectl's lastState.terminated
+field rather than assumed from docker stats alone. SIGBUS on Apple
+Silicon is a known signature of architecture-mismatched or emulation-
+incompatible binaries, particularly in minimal "distroless" image
+variants with less tolerance for platform quirks than standard images.
+
+Resolved via clean uninstall/reinstall with an explicit, non-distroless
+Grafana image (grafana/grafana:11.4.0) specified from the initial
+install, avoiding the stuck pending-install trap entirely on the second
+attempt. Confirmed stable: 3/3 Running, 0 restarts, verified against a
+real working dashboard showing live per-namespace metrics across the
+entire rebuilt cluster (secureflow, vault, monitoring, kube-system).
+
+Full cluster (Vault, Gatekeeper, Falco, Prometheus/Grafana, all app
+services) confirmed fully restored and stable following both incidents.
