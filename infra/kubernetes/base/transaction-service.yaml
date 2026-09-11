@@ -28,8 +28,7 @@ spec:
       serviceAccountName: transaction-service-sa
       containers:
         - name: transaction-service
-          image: secureflow/transaction-service:latest
-          imagePullPolicy: IfNotPresent
+          image: localhost:5001/secureflow/transaction-service@sha256:1b173c4ca6ae72e705b50f3eaa803511c61512cfc09b1d1c68f7cd37be463066
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/tx-secrets && exec python app.py

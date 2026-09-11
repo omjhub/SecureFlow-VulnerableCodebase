@@ -65,3 +65,34 @@ entire rebuilt cluster (secureflow, vault, monitoring, kube-system).
 
 Full cluster (Vault, Gatekeeper, Falco, Prometheus/Grafana, all app
 services) confirmed fully restored and stable following both incidents.
+
+## Update: Local Container Registry — Follow-up Work
+
+Set up a local Docker registry (registry:2), connected to the kind network,
+with containerd on the control-plane node configured to trust it via
+/etc/containerd/certs.d/localhost:5001/hosts.toml. Pushed all three
+service images and confirmed real, non-empty RepoDigests for the first
+time in the project (Day 8's local-only images never had this).
+
+Proved the full chain works: a test pod successfully pulled a
+digest-referenced image through the registry and passed live Gatekeeper
+admission. Updated all three Deployment manifests to reference real
+pushed digests instead of :latest tags, removing the now-unnecessary
+imagePullPolicy: IfNotPresent workaround.
+
+Result: K8sNoLatestTag constraint violations dropped from 3 (Day 8's
+documented, accepted gap) to 0 — genuinely closed, not skipped or
+explained away.
+
+While rolling out the new digests, discovered a second, distinct
+consequence of the day's earlier Docker Desktop incident: Vault's
+Kubernetes auth configuration had been silently wiped (vault-0 had
+restarted once, 3+ hours earlier, confirmed via kubectl get pod restart
+count), consistent with dev mode's in-memory-only storage losing all
+configuration on any restart. Diagnosed precisely via vault read
+auth/kubernetes/config returning "No value found" despite the pod
+itself appearing healthy — re-applied Vault's full configuration
+(auth method, secrets, policies, roles, audit logging) to resolve.
+
+Final state: all pods healthy, all four Gatekeeper constraints at zero
+violations, digest-based image pinning genuinely functional end to end.

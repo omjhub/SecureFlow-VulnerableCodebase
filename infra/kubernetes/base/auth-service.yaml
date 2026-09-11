@@ -29,8 +29,7 @@ spec:
       serviceAccountName: auth-service-sa
       containers:
         - name: auth-service
-          image: secureflow/auth-service:latest
-          imagePullPolicy: IfNotPresent
+          image: localhost:5001/secureflow/auth-service@sha256:37afdb566ce456f49c2f72213b9a771c262850ed0d891e7e58b7d0037f730957
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/auth-secrets && exec python app.py

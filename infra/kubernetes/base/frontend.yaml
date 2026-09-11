@@ -28,8 +28,7 @@ spec:
       serviceAccountName: frontend-sa
       containers:
         - name: frontend
-          image: secureflow/frontend:latest
-          imagePullPolicy: IfNotPresent
+          image: localhost:5001/secureflow/frontend@sha256:b8b4b91eaa18fbdd6232e7ced124a6b1f39ec175cae36e2ea4f91f1944f25beb
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/frontend-secrets && exec python app.py
