@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gatekeeper-audit-metrics
+  namespace: gatekeeper-system
+  labels:
+    app: gatekeeper-audit
+spec:
+  selector:
+    control-plane: audit-controller
+  ports:
+    - name: metrics
+      port: 8888
+      targetPort: 8888

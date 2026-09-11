@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gatekeeper-audit
+  namespace: gatekeeper-system
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: gatekeeper-audit
+  namespaceSelector:
+    matchNames:
+      - gatekeeper-system
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
