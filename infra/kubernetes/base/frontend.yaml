@@ -25,6 +25,9 @@ spec:
           export SESSION_SECRET="{{ .Data.data.SESSION_SECRET }}"
           {{- end }}
     spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
       serviceAccountName: frontend-sa
       containers:
         - name: frontend
@@ -49,9 +52,13 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 100
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
 ---
 apiVersion: v1
 kind: Service

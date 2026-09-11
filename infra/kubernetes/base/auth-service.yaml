@@ -27,6 +27,9 @@ spec:
           {{- end }}
     spec:
       serviceAccountName: auth-service-sa
+      volumes:
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: auth-service
           image: localhost:5001/secureflow/auth-service@sha256:a07f1ced66929d854e78b8d118f4449008145820058a4b9b66da49cf3dba39ee
@@ -57,9 +60,13 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 100
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
 ---
 apiVersion: v1
 kind: Service

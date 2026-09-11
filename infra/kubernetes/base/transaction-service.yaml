@@ -25,6 +25,9 @@ spec:
           export DB_PASSWORD="{{ .Data.data.DB_PASSWORD }}"
           {{- end }}
     spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
       serviceAccountName: transaction-service-sa
       containers:
         - name: transaction-service
@@ -56,9 +59,13 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 100
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
 ---
 apiVersion: v1
 kind: Service
