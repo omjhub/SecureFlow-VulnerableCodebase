@@ -20,6 +20,8 @@ spec:
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "auth-db-role"
+        vault.hashicorp.com/agent-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]'
+        vault.hashicorp.com/agent-init-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]'
         vault.hashicorp.com/agent-inject-template-auth-db-secrets: |
           {{- with secret "secureflow/data/auth-service" -}}
           export POSTGRES_PASSWORD="{{ .Data.data.DB_PASSWORD }}"
@@ -32,6 +34,15 @@ spec:
         - name: fix-permissions
           image: busybox:1.36
           command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data /var/run/postgresql"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
@@ -121,6 +132,8 @@ spec:
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "transaction-db-role"
+        vault.hashicorp.com/agent-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]'
+        vault.hashicorp.com/agent-init-json-patch: '[{"op":"add","path":"/securityContext","value":{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]'
         vault.hashicorp.com/agent-inject-template-tx-db-secrets: |
           {{- with secret "secureflow/data/transaction-service" -}}
           export POSTGRES_PASSWORD="{{ .Data.data.DB_PASSWORD }}"
@@ -133,6 +146,15 @@ spec:
         - name: fix-permissions
           image: busybox:1.36
           command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data /var/run/postgresql"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
