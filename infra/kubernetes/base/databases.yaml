@@ -17,20 +17,37 @@ spec:
         svc: auth-db
         app: auth-db
         team: devsecops
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "auth-db-role"
+        vault.hashicorp.com/agent-inject-template-auth-db-secrets: |
+          {{- with secret "secureflow/data/auth-service" -}}
+          export POSTGRES_PASSWORD="{{ .Data.data.DB_PASSWORD }}"
+          {{- end }}
     spec:
+      serviceAccountName: auth-db-sa
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data /var/run/postgresql"]
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: pg-run
+              mountPath: /var/run/postgresql
       containers:
         - name: postgres
           image: postgres:14
+          command: ["/bin/sh", "-c"]
+          args:
+            - . /vault/secrets/auth-db-secrets && exec docker-entrypoint.sh postgres
           env:
             - name: POSTGRES_DB
               value: authdb
             - name: POSTGRES_USER
               value: authuser
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                configMapKeyRef:
-                  name: secureflow-config
-                  key: AUTH_DB_PASSWORD
           ports:
             - containerPort: 5432
           resources:
@@ -40,6 +57,32 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: pg-run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: pg-data
+          emptyDir: {}
+        - name: pg-run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -75,20 +118,37 @@ spec:
         svc: transaction-db
         app: transaction-db
         team: devsecops
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "transaction-db-role"
+        vault.hashicorp.com/agent-inject-template-tx-db-secrets: |
+          {{- with secret "secureflow/data/transaction-service" -}}
+          export POSTGRES_PASSWORD="{{ .Data.data.DB_PASSWORD }}"
+          {{- end }}
     spec:
+      serviceAccountName: transaction-db-sa
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data /var/run/postgresql"]
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: pg-run
+              mountPath: /var/run/postgresql
       containers:
         - name: postgres
           image: postgres:14
+          command: ["/bin/sh", "-c"]
+          args:
+            - . /vault/secrets/tx-db-secrets && exec docker-entrypoint.sh postgres
           env:
             - name: POSTGRES_DB
               value: transactiondb
             - name: POSTGRES_USER
               value: txuser
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                configMapKeyRef:
-                  name: secureflow-config
-                  key: TX_DB_PASSWORD
           ports:
             - containerPort: 5432
           resources:
@@ -98,6 +158,32 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: pg-run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: pg-data
+          emptyDir: {}
+        - name: pg-run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
