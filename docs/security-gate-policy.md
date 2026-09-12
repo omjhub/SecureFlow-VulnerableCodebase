@@ -104,3 +104,15 @@ categories — neither is a general severity or volume threshold, and
 neither reduces detection coverage: excluded findings remain visible in
 the full JSON artifacts and in this policy document, just correctly
 excluded from a blocking decision they cannot meaningfully inform.
+
+**7.4 Note on standalone stage vs. Security Gate discrepancy.** The
+standalone Trivy Image Scan job (Day 4 origin) retains its original
+raw hard-fail logic — any CRITICAL/HIGH finding blocks that job,
+regardless of fix availability. This is intentional and mirrors the
+SonarQube precedent from Section 3: individual scanner jobs report
+their complete, unfiltered findings; only the Security Gate applies
+final policy (Section 7.2's no-fix-available exception) and makes the
+actual merge-blocking decision. Verified directly (Day 10): of 168 raw
+CRITICAL/HIGH Trivy image findings across all three services, 0 have
+an available FixedVersion — confirming the Security Gate's reported 0
+is accurate, not a filtering defect.
