@@ -27,6 +27,8 @@ spec:
           export SESSION_SECRET="{{ .Data.data.SESSION_SECRET }}"
           {{- end }}
     spec:
+      securityContext:
+        runAsNonRoot: true
       volumes:
         - name: tmp
           emptyDir: {}

@@ -27,6 +27,8 @@ spec:
           export DB_PASSWORD="{{ .Data.data.DB_PASSWORD }}"
           {{- end }}
     spec:
+      securityContext:
+        runAsNonRoot: true
       volumes:
         - name: tmp
           emptyDir: {}
