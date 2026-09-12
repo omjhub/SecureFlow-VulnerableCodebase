@@ -87,6 +87,8 @@ spec:
               mountPath: /var/run/postgresql
             - name: tmp
               mountPath: /tmp
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
       volumes:
         - name: pg-data
           emptyDir: {}
@@ -94,6 +96,9 @@ spec:
           emptyDir: {}
         - name: tmp
           emptyDir: {}
+        - name: init-script
+          configMap:
+            name: auth-db-init
 ---
 apiVersion: v1
 kind: Service
@@ -199,6 +204,8 @@ spec:
               mountPath: /var/run/postgresql
             - name: tmp
               mountPath: /tmp
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
       volumes:
         - name: pg-data
           emptyDir: {}
@@ -206,6 +213,9 @@ spec:
           emptyDir: {}
         - name: tmp
           emptyDir: {}
+        - name: init-script
+          configMap:
+            name: transaction-db-init
 ---
 apiVersion: v1
 kind: Service
