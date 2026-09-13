@@ -36,7 +36,7 @@ spec:
           emptyDir: {}
       containers:
         - name: auth-service
-          image: localhost:5001/secureflow/auth-service@sha256:a07f1ced66929d854e78b8d118f4449008145820058a4b9b66da49cf3dba39ee
+          image: localhost:5001/secureflow/auth-service@sha256:6d7ba2d1258745c37f61420fd89aab7701ed40a8deccdf312d2cfb8d1637536c
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/auth-secrets && exec python app.py

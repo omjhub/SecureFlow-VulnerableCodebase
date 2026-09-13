@@ -35,7 +35,7 @@ spec:
       serviceAccountName: transaction-service-sa
       containers:
         - name: transaction-service
-          image: localhost:5001/secureflow/transaction-service@sha256:61b9aefdb82238677d884d3d0d2253efcca42135bdc660f28269a1d950ab040f
+          image: localhost:5001/secureflow/transaction-service@sha256:3a45c9534fd17a5825aa15070f06069bd69e0b6d623cdaad3b081f3c94340c70
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/tx-secrets && exec python app.py

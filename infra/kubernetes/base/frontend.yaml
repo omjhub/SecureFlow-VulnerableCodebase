@@ -35,7 +35,7 @@ spec:
       serviceAccountName: frontend-sa
       containers:
         - name: frontend
-          image: localhost:5001/secureflow/frontend@sha256:b9a8858233122a4e05b78fb4ca6dbda58b7696f1d9025d23a041d061d65f42bd
+          image: localhost:5001/secureflow/frontend@sha256:d10b2574a40e2528c5585b1cbcd0e4bf61924e7db45b82e66fe5e404a890b7a8
           command: ["/bin/sh", "-c"]
           args:
             - . /vault/secrets/frontend-secrets && exec python app.py
