@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: falco-metrics
+  namespace: falco
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: falco-metrics
+  namespaceSelector:
+    matchNames:
+      - falco
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics

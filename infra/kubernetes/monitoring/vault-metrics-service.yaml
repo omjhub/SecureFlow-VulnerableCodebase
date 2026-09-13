@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-metrics
+  namespace: vault
+  labels:
+    app: vault-metrics
+spec:
+  selector:
+    app.kubernetes.io/name: vault
+  ports:
+    - name: metrics
+      port: 8200
+      targetPort: 8200
