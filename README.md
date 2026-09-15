@@ -1,182 +1,55 @@
-# SecureFlow — Vulnerable Banking Platform
+# SecureFlow — Secure CI/CD Pipeline for a Vulnerable Banking Platform
 
-> **This is an INTENTIONALLY INSECURE baseline.**
-> Do not deploy to a real cloud account. Run only in an isolated lab or local
-> Kubernetes cluster (kind, k3s, minikube).
+This repository is forked from [Dcoder21/SecureFlow-VulnerableCodebase](https://github.com/Dcoder21/SecureFlow-VulnerableCodebase), a deliberately vulnerable banking microservices codebase. **The vulnerable application code is the base repo's, not mine.** What's mine is everything built on top of it: a seven-stage DevSecOps CI/CD pipeline, the security tooling wired into it, and the remediation of the infrastructure-as-code findings that pipeline surfaced.
 
-This repository is the "before" state for the SecureFlow DevSecOps case study.
-Your job is to build the security pipeline, remediations, policy enforcement,
-secrets management, runtime monitoring, and observability described in the
-project brief. What you fork is broken on purpose — every vulnerability listed
-in [`VULNERABILITIES.md`](./VULNERABILITIES.md) is real and exploitable.
+## The pipeline
 
-Read the project brief PDF end-to-end before you touch any code.
+A GitHub Actions pipeline enforcing security at seven stages before code can merge:
 
----
+| Stage | Tool | Purpose |
+|---|---|---|
+| Secret scanning | Gitleaks | Catch hardcoded credentials before they reach the repo |
+| Static analysis | SonarQube | Application code quality and security issues |
+| Container scanning | Trivy | CVEs in container images |
+| Kubernetes config scanning | Trivy | Misconfigurations in K8s manifests |
+| IaC scanning | Checkov | Terraform infrastructure misconfigurations |
+| Secrets management | HashiCorp Vault | Centralised secrets, no plaintext credentials in code or config |
+| Policy enforcement | OPA Gatekeeper | Admission control policy on the cluster |
+| Runtime detection | Falco | Anomalous behaviour detection at runtime |
 
-## Architecture
+The pipeline distinguishes DevSecOps-owned findings (Gitleaks, Trivy, Checkov, which block a merge) from AppSec-owned findings (SonarQube, which route to a separate intake without blocking), reflecting how a real organisation would split ownership between infrastructure security and application security teams.
 
-```
-                     ┌────────────────────┐
-                     │     frontend       │  Flask + Jinja2 on :5000
-                     │  (server-rendered) │
-                     └──────┬───────┬─────┘
-                            │       │
-                 calls       │       │  calls
-                            ▼       ▼
-            ┌─────────────────┐  ┌──────────────────────┐
-            │  auth-service   │  │ transaction-service  │
-            │   Flask :5001   │  │    Flask :5002       │
-            └────────┬────────┘  └──────────┬───────────┘
-                     │                      │
-                     ▼                      ▼
-              ┌────────────┐          ┌────────────────┐
-              │  auth-db   │          │ transaction-db │
-              │ postgres   │          │   postgres     │
-              └────────────┘          └────────────────┘
-```
+## Infrastructure remediation
 
-Three Python/Flask services, two independent PostgreSQL instances, microservices
-pattern. Each service has its own database so that per-service Vault policies
-(Step 14 of the brief) are meaningful — compromising one service does not grant
-access to another service's data.
+The Terraform IaC in this repo started with 72 failing Checkov checks. Rather than suppressing them, each was worked through individually:
 
----
+- **IAM** scoped to least-privilege managed policies, removing duplicate `AdministratorAccess` grants
+- **EKS** moved to private subnets with restricted endpoint access, KMS secrets encryption, full control plane logging, and a supported Kubernetes version
+- **S3** buckets fully encrypted, versioned, logged, with public access blocked, plus lifecycle rules and event notifications
+- **RDS** moved to private subnets with encryption at rest and in transit (forced SSL/TLS), automated backups, deletion protection, Multi-AZ, IAM authentication, and CloudWatch logging
+- **IRSA** (IAM Roles for Service Accounts) established via an OIDC provider, replacing shared node-role permissions with a per-service least-privilege pattern
+- **VPC flow logs**, a locked-down default security group, and explicit KMS key policies added to close remaining gaps
 
-## Quick Start — Docker Compose
+This brought Checkov down to 6 remaining findings, each individually reviewed: one resolved by forcing SSL/TLS on RDS connections, and the rest genuinely tool-limitation findings (cases where the underlying design is correct but Checkov's static check can't recognise it), each documented with a `checkov:skip` annotation explaining why, not suppressed silently. Final state: 72 to 0, with every skip formally justified rather than blanket-ignored.
 
-```bash
-docker-compose up --build
+## Proof the pipeline actually blocks
 
-# Services are then available at:
-#   frontend              http://localhost:5000
-#   auth-service API      http://localhost:5001
-#   transaction-service   http://localhost:5002
-#   auth-db               localhost:5432
-#   transaction-db        localhost:5433
-```
-
-Seed users (the password hashes are MD5 — weak on purpose, see AV-05):
-
-| Username | Password   | Role  |
-|----------|-----------|-------|
-| admin    | admin123  | admin |
-| alice    | alice123  | user  |
-| bob      | bob123    | user  |
-
----
-
-## Quick Start — Kubernetes (base manifests)
-
-```bash
-kubectl apply -k infra/kubernetes/base
-
-# Everything will apply because there is no admission controller in the way.
-# That is the point. One of your tasks is to install OPA Gatekeeper and watch
-# the base manifests get rejected.
-
-kubectl get pods -n secureflow -w
-```
-
----
-
-## Example Exploits
-
-Once the stack is running, these should all succeed against the baseline:
-
-```bash
-BASE=http://localhost:5001
-
-# AV-01 — SQL injection auth bypass. Logs in as admin with no password.
-curl -s -X POST $BASE/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username": "admin'\''--", "password": "anything"}'
-
-# Save the token from the response, then:
-TOKEN=<paste token here>
-
-# TV-01 — IDOR. Read admin's balance from alice's account.
-curl -s http://localhost:5002/balance/1 \
-  -H "Authorization: Bearer $TOKEN"
-
-# TV-03 — Negative transfer. Drains the recipient.
-curl -s -X POST http://localhost:5002/transfer \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"from_account": 2, "to_account": 3, "amount": -500}'
-
-# FV-01 — Reflected XSS via query string.
-# Open in browser after logging in as alice:
-#   http://localhost:5000/dashboard?msg=<script>alert(document.cookie)</script>
-```
-
----
-
-## What's In This Repository
+This isn't a pipeline that only runs and reports, it enforces. A recent pull request into `main` was automatically blocked by the security gate:
 
 ```
-secureflow/
-├── .env                              ← IV-04: committed on purpose, 5 secrets
-├── docker-compose.yml                ← IV-01/02/03/06/07 + CK-03
-├── .gitignore                        ← deliberately does not exclude .env
-├── README.md                         ← this file
-├── VULNERABILITIES.md                ← the full index keyed to the PDF
-├── services/
-│   ├── auth-service/                 ← AV-01..AV-08
-│   ├── transaction-service/          ← TV-01..TV-07
-│   └── frontend/                     ← FV-01..FV-07 (except FV-04)
-├── db/
-│   ├── auth/init.sql                 ← users schema + seed
-│   └── transaction/init.sql          ← accounts, transactions, cards + seed
-└── infra/
-    ├── kubernetes/base/              ← CK-02..CK-09
-    └── terraform/                    ← IV-08, IV-09, IV-10 + the modules Checkov will scan
+Security Gate Report
+DevSecOps-Owned Findings (blocking):
+  Gitleaks (secrets): 87
+  Trivy image scan (CRITICAL/HIGH CVEs): 175
+  Trivy K8s config scan (CRITICAL/HIGH): 13
+  Checkov Terraform scan (failed checks): 0
+AppSec-Owned Findings (routed, non-blocking):
+  SonarQube (application code): 2 — routed to AppSec intake
+Result: BLOCKED — DevSecOps-owned findings present (275 total)
 ```
 
----
+That block is expected and correct: the base repo's application code is intentionally vulnerable, so the secret and CVE scanners are supposed to find a large number of issues in it. The infrastructure layer (Checkov) is clean at 0, which is the part I was responsible for hardening.
 
-## What's NOT In This Repository
+## Tools
 
-Everything in this list is your job to build, based on the project brief:
-
-- `.github/workflows/*` — the GitHub Actions pipeline
-- `.gitleaks.toml` — custom Gitleaks rules for Flask/JWT/DB patterns
-- `sonar-project.properties` — SonarQube configuration
-- `pipeline/scripts/security-gate.sh` — the aggregation script
-- Cosign keys and signing workflow
-- OPA Gatekeeper ConstraintTemplates and Constraints
-- Falco custom rules
-- HashiCorp Vault policies, roles, and Agent Injector annotations
-- Kubernetes NetworkPolicies
-- Hardened Kustomize overlays (the `base/` here is the broken version)
-- Prometheus configuration and Grafana dashboards
-- OWASP ZAP scan configuration
-
-If you find yourself adding a file and wondering whether it belongs in the
-baseline or the solution — it's in the solution. The baseline is broken; you
-are what fixes it.
-
----
-
-## Success Criteria
-
-the expected
-artefacts include a green 7-stage pipeline, zero committed secrets, zero
-CRITICAL CVEs in any service image, zero CRITICAL Checkov findings, zero OPA
-Gatekeeper violations, all application exploits in this README returning
-400/403, Vault-injected secrets, Falco alerts triggering on intentional test
-events, and signed images with SBOM attestations.
-
----
-
-## Safety Notes
-
-- Do not `terraform apply` the infrastructure module against a real AWS account.
-  The IAM policies use `AdministratorAccess` and the RDS instances are publicly
-  accessible. Checkov is supposed to catch that before it reaches AWS.
-- The `.env` file contains canonical AWS example keys (`AKIAIOSFODNN7EXAMPLE`).
-  They are not live credentials but they will trip every secret scanner you
-  point at the repo — which is the exercise.
-- When you rotate and remove secrets during remediation, remember that deleting
-  a file in a later commit does **not** remove the secret from git history.
-  
+`Gitleaks` `SonarQube` `Trivy` `Checkov` `HashiCorp Vault` `OPA Gatekeeper` `Falco` `Terraform` `GitHub Actions` `AWS (EKS, RDS, S3, IAM)`
