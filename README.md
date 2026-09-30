@@ -1,6 +1,10 @@
 # SecureFlow — Secure CI/CD Pipeline for a Vulnerable Banking Platform
 
-This repository is forked from [Dcoder21/SecureFlow-VulnerableCodebase](https://github.com/Dcoder21/SecureFlow-VulnerableCodebase), a deliberately vulnerable banking microservices codebase. **The vulnerable application code is the base repo's, not mine.** What's mine is everything built on top of it: a seven-stage DevSecOps CI/CD pipeline, the security tooling wired into it, and the remediation of the infrastructure-as-code findings that pipeline surfaced.
+SecureFlow is a security focused CI/CD project built around a banking microservices platform. I designed and implemented a seven stage DevSecOps pipeline, integrating automated security testing and analysis throughout the software delivery lifecycle.
+
+The project includes security tooling for identifying application, dependency, container, and infrastructure security issues, alongside the remediation of infrastructure-as-code findings identified during pipeline security checks.
+
+The original application codebase was used as the foundation for the project, while the CI/CD architecture, security integrations, pipeline automation, and infrastructure remediation work were implemented as part of SecureFlow.
 
 ## The pipeline
 
