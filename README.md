@@ -41,7 +41,7 @@ The pipeline does not just report findings. It applies an **ownership-based secu
 ## Highlights
 
 - **72 to 0 Checkov failures** on the Terraform for the AWS environment, with every remaining skip documented and justified in code rather than silently suppressed.
-- **A live pull request automatically blocked** on 275 DevSecOps-owned findings across secrets, image CVEs and Kubernetes misconfigurations.
+- **From 339 blocking findings to a clean gate.** A live pull request was automatically blocked on 339 DevSecOps-owned findings; after remediation the gate passed with **0** across secrets, image CVEs, Kubernetes manifests and Terraform.
 - **Ownership-based security gate.** DevSecOps findings (Gitleaks, Trivy, Checkov) block; AppSec findings (SonarQube, ZAP) are routed without blocking, defined in a written [gate policy](docs/security-gate-policy.md).
 - **Auditable exception process.** A `/security-exception <justification>` comment on a pull request is logged by a dedicated workflow; requests without a written justification are rejected.
 - **No plaintext secrets in the cluster.** HashiCorp Vault with Kubernetes auth, per-service policies and audit logging.
@@ -115,24 +115,38 @@ In the cluster, **Vault**, **OPA Gatekeeper** and **Falco** add three more layer
 
 ## Proof the gate blocks
 
-A gate that has never failed is an assumption. A pull request into `main` was automatically blocked, and the gate posted this report to the pull request:
+A gate that has never failed is an assumption. The gate was proven in three stages: blocking, enforcing through branch protection, and finally passing once the DevSecOps-owned findings were remediated.
+
+**1. Blocked.** The first gate run on a pull request into `main` found **339 DevSecOps-owned findings**, including all 72 Checkov failures, and posted its report to the pull request.
+
+![Security gate report blocking a pull request](docs/images/gate-report-blocked.png)
+
+**2. Enforced.** Branch protection makes the Security Gate a required check, so the merge button is disabled until it passes.
+
+![Merge blocked by failing required checks](docs/images/merge-blocked.png)
+
+After the Terraform was hardened, a later run was still blocked on **275 findings**, but with Checkov at **0**: the infrastructure layer was clean, and the remaining findings were in the intentionally vulnerable application code.
 
 ```text
-Security Gate Report
-
 DevSecOps-Owned Findings (blocking):
   Gitleaks (secrets): 87
   Trivy image scan (CRITICAL/HIGH CVEs): 175
   Trivy K8s config scan (CRITICAL/HIGH): 13
   Checkov Terraform scan (failed checks): 0
-
-AppSec-Owned Findings (routed, non-blocking):
-  SonarQube (application code): 2, routed to AppSec intake
-
 Result: BLOCKED, DevSecOps-owned findings present (275 total)
 ```
 
-The block is expected and correct: the application code is intentionally vulnerable, so the secret and CVE scanners should find a lot. The infrastructure layer I was responsible for hardening is **clean at 0**.
+**3. Passed.** After removing secrets from Git history, fixing image CVEs and hardening the Kubernetes manifests, the gate passed with **0 DevSecOps-owned findings** across Gitleaks, Trivy image, Trivy Kubernetes and Checkov. Application code findings from SonarQube and ZAP were routed to AppSec, as the policy defines.
+
+![Security gate passing with zero DevSecOps-owned findings](docs/images/gate-passed.png)
+
+### Exception process in action
+
+A `/security-exception` comment with a written justification is logged with the requester, timestamp and policy reference. A comment without a justification is rejected automatically.
+
+| Logged with justification | Rejected without justification |
+| --- | --- |
+| ![Security exception logged](docs/images/exception-logged.png) | ![Security exception rejected](docs/images/exception-rejected.png) |
 
 ---
 
@@ -165,6 +179,14 @@ That brought Checkov to **6 remaining findings**. One was fixed by forcing SSL/T
 | **Network isolation** | Kubernetes NetworkPolicies applied with the base manifests |
 | **Monitoring** | Prometheus [ServiceMonitors](infra/kubernetes/monitoring) for Falco, Gatekeeper and Vault, visualised in Grafana |
 
+**SecureFlow Security Overview in Grafana:** Vault audit request rate, Falco alerts by rule, pod restarts, memory and CPU, and OPA Gatekeeper policy violations by enforcement action.
+
+![Grafana security dashboard](docs/images/grafana-security-dashboard.png)
+
+**Hardened workloads running:** every service and database pod runs with a Vault Agent sidecar (2/2) and an explicit non-root security context.
+
+![Hardened pods running](docs/images/pods-hardened.png)
+
 ---
 
 ## Notable findings
@@ -182,7 +204,8 @@ That brought Checkov to **6 remaining findings**. One was fixed by forcing SSL/T
 | Checkov failures on Terraform | 72 | **0** (every skip justified) |
 | Security layers enforced | 0 | **7 in CI + 3 in cluster** |
 | Gate behaviour | None | **Ownership-based, blocking for DevSecOps findings** |
-| Pull request with planted vulnerabilities | Would merge | **Blocked on 275 findings** |
+| DevSecOps-owned findings at the gate | 339 | **0 (gate passed)** |
+| Pull request with planted vulnerabilities | Would merge | **Blocked by required checks** |
 | Secrets in cluster config | Plaintext | **Vault, audited** |
 | Admission policies | None | **4 OPA Gatekeeper policies** |
 | Runtime detection | None | **Falco with custom rules** |
@@ -275,7 +298,7 @@ This creates the kind cluster, builds and loads the images, applies the manifest
 
 | Priority | Item | Plan |
 | --- | --- | --- |
-| High | Application vulnerabilities remain by design | Remediate the AppSec-owned findings and re-run the gate to a clean pass |
+| High | AppSec-owned code findings (SonarQube, ZAP) are routed, not yet fixed | Remediate the application vulnerabilities in [VULNERABILITIES.md](VULNERABILITIES.md), including the exposed Werkzeug debugger |
 | Medium | One custom Falco rule (shell spawned) does not fire independently | Shell access is still detected by Falco's built-in rule; isolate and debug with verbose rule diagnostics ([analysis](evidence/day08-falco-analysis.md)) |
 | Medium | Images pinned by tag, not digest | Pin by digest and add image signing ([limitation](evidence/day08-image-pinning-limitation.md)) |
 | Low | Runtime controls validated on kind | Apply the hardened Terraform and run the same controls on Amazon EKS |
